@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Projects — TaskFlow{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Projects</h1>
+        <p class="page-sub">{{ projects|length }} project(s) total</p>
+    </div>
+    {% if current_user.role == 'admin' %}
+    <button class="btn btn-primary" onclick="openModal('createProjectModal')">+ New Project</button>
+    {% endif %}
+</div>
+
+{% if projects %}
+<div class="projects-grid">
+    {% for p in projects %}
+    <div class="project-card">
+        <div class="project-card-header">
+            <div class="project-icon">{{ p.name[0].upper() }}</div>
+            <div>
+                <div class="project-card-name">{{ p.name }}</div>
+                <div class="project-card-date">Created {{ p.created_at.strftime('%b %d, %Y') }}</div>
+            </div>
+        </div>
+        {% if p.description %}
+        <p class="project-desc">{{ p.description }}</p>
+        {% endif %}
+        <div class="project-card-stats">
+            <span>📋 {{ p.tasks|length }} tasks</span>
+            <span>👥 {{ p.members|length }} members</span>
+            <span>✅ {{ p.tasks|selectattr('status','eq','done')|list|length }} done</span>
+        </div>
+        <div class="project-members">
+            {% for m in p.members[:5] %}
+            <div class="member-avatar" title="{{ m.name }}">{{ m.name[0].upper() }}</div>
+            {% endfor %}
+            {% if p.members|length > 5 %}
+            <div class="member-avatar">+{{ p.members|length - 5 }}</div>
+            {% endif %}
+        </div>
+        {% if current_user.role == 'admin' %}
+        <form method="POST" action="{{ url_for('delete_project', pid=p.id) }}" onsubmit="return confirm('Delete this project?')">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state large">
+    <div class="empty-icon">◈</div>
+    <p>No projects yet.</p>
+    {% if current_user.role == 'admin' %}
+    <button class="btn btn-primary" onclick="openModal('createProjectModal')">Create First Project</button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Create Project Modal -->
+{% if current_user.role == 'admin' %}
+<div class="modal-overlay" id="createProjectModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>New Project</h3>
+            <button onclick="closeModal('createProjectModal')" class="modal-close">×</button>
+        </div>
+        <form method="POST" action="{{ url_for('create_project') }}">
+            <div class="form-group">
+                <label>Project Name *</label>
+                <input type="text" name="name" placeholder="e.g. Website Redesign" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" placeholder="Brief description..." rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Add Members</label>
+                <div class="checkbox-list">
+                    {% for u in users %}
+                    {% if u.id != current_user.id %}
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="members" value="{{ u.id }}">
+                        <span class="member-avatar-sm">{{ u.name[0].upper() }}</span>
+                        {{ u.name }} <span class="badge-{{ u.role }}">{{ u.role }}</span>
+                    </label>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('createProjectModal')" class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Project</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

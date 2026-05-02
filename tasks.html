@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block title %}Tasks — TaskFlow{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Tasks</h1>
+        <p class="page-sub">{{ tasks|length }} task(s) total</p>
+    </div>
+    {% if current_user.role == 'admin' %}
+    <button class="btn btn-primary" onclick="openModal('createTaskModal')">+ New Task</button>
+    {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="todo">To Do</button>
+    <button class="filter-btn" data-filter="in_progress">In Progress</button>
+    <button class="filter-btn" data-filter="done">Done</button>
+    <button class="filter-btn" data-filter="overdue">Overdue</button>
+</div>
+
+{% if tasks %}
+<div class="tasks-table-wrap">
+    <table class="tasks-table">
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Project</th>
+                <th>Assigned To</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr class="task-row-tr" data-status="{{ task.status }}" data-overdue="{{ 'overdue' if task.is_overdue else '' }}">
+                <td>
+                    <div class="task-title-cell">{{ task.title }}</div>
+                    {% if task.description %}
+                    <div class="task-desc-cell">{{ task.description[:60] }}{% if task.description|length > 60 %}...{% endif %}</div>
+                    {% endif %}
+                </td>
+                <td><span class="project-badge">{{ task.project.name }}</span></td>
+                <td>
+                    {% if task.assignee %}
+                    <div class="assignee-cell">
+                        <div class="member-avatar-sm">{{ task.assignee.name[0].upper() }}</div>
+                        {{ task.assignee.name }}
+                    </div>
+                    {% else %}
+                    <span class="unassigned">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td><span class="priority-tag priority-{{ task.priority }}">{{ task.priority }}</span></td>
+                <td>
+                    {% if task.due_date %}
+                    <span class="{% if task.is_overdue %}overdue-date{% endif %}">
+                        {{ task.due_date.strftime('%b %d') }}
+                        {% if task.is_overdue %}⚠{% endif %}
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if current_user.role == 'admin' or task.assigned_to == current_user.id %}
+                    <form method="POST" action="{{ url_for('update_task_status', tid=task.id) }}" class="inline-form">
+                        <select name="status" onchange="this.form.submit()" class="status-select status-{{ task.status }}">
+                            <option value="todo" {% if task.status=='todo' %}selected{% endif %}>To Do</option>
+                            <option value="in_progress" {% if task.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="done" {% if task.status=='done' %}selected{% endif %}>Done</option>
+                        </select>
+                    </form>
+                    {% else %}
+                    <span class="status-badge status-{{ task.status }}">{{ task.status.replace('_',' ').title() }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if current_user.role == 'admin' %}
+                    <form method="POST" action="{{ url_for('delete_task', tid=task.id) }}" onsubmit="return confirm('Delete task?')">
+                        <button type="submit" class="btn btn-danger btn-xs">✕</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state large">
+    <div class="empty-icon">◉</div>
+    <p>No tasks yet.</p>
+    {% if current_user.role == 'admin' %}
+    <button class="btn btn-primary" onclick="openModal('createTaskModal')">Create First Task</button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Create Task Modal -->
+{% if current_user.role == 'admin' %}
+<div class="modal-overlay" id="createTaskModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>New Task</h3>
+            <button onclick="closeModal('createTaskModal')" class="modal-close">×</button>
+        </div>
+        <form method="POST" action="{{ url_for('create_task') }}">
+            <div class="form-group">
+                <label>Task Title *</label>
+                <input type="text" name="title" placeholder="e.g. Design landing page" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" placeholder="Task details..." rows="2"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Project *</label>
+                    <select name="project_id" id="projectSelect" required onchange="loadMembers(this.value)">
+                        <option value="">Select project</option>
+                        {% for p in projects %}
+                        <option value="{{ p.id }}">{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assign To</label>
+                    <select name="assigned_to" id="memberSelect">
+                        <option value="">Unassigned</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" name="due_date">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('createTaskModal')" class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

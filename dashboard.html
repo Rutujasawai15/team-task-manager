@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — TaskFlow{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Welcome back, {{ current_user.name }} 👋</p>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card stat-todo">
+        <div class="stat-num">{{ todo }}</div>
+        <div class="stat-label">To Do</div>
+        <div class="stat-icon">○</div>
+    </div>
+    <div class="stat-card stat-progress">
+        <div class="stat-num">{{ in_progress }}</div>
+        <div class="stat-label">In Progress</div>
+        <div class="stat-icon">◑</div>
+    </div>
+    <div class="stat-card stat-done">
+        <div class="stat-num">{{ done }}</div>
+        <div class="stat-label">Done</div>
+        <div class="stat-icon">●</div>
+    </div>
+    <div class="stat-card stat-overdue">
+        <div class="stat-num">{{ overdue }}</div>
+        <div class="stat-label">Overdue</div>
+        <div class="stat-icon">⚠</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Recent Tasks -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Recent Tasks</h2>
+            <a href="{{ url_for('tasks') }}" class="btn btn-sm">View All</a>
+        </div>
+        {% if recent_tasks %}
+        <div class="task-list">
+            {% for task in recent_tasks %}
+            <div class="task-row">
+                <div class="task-status-dot status-{{ task.status }}"></div>
+                <div class="task-info">
+                    <div class="task-title-text">{{ task.title }}</div>
+                    <div class="task-meta">
+                        {{ task.project.name }}
+                        {% if task.is_overdue %}<span class="badge-overdue">Overdue</span>{% endif %}
+                    </div>
+                </div>
+                <span class="priority-tag priority-{{ task.priority }}">{{ task.priority }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No tasks yet. <a href="{{ url_for('tasks') }}">Create one →</a></div>
+        {% endif %}
+    </div>
+
+    <!-- Projects Overview -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Projects</h2>
+            <a href="{{ url_for('projects') }}" class="btn btn-sm">View All</a>
+        </div>
+        {% if projects %}
+        <div class="project-list">
+            {% for p in projects %}
+            <div class="project-row">
+                <div class="project-dot"></div>
+                <div class="project-info">
+                    <div class="project-name">{{ p.name }}</div>
+                    <div class="project-stats">{{ p.tasks|length }} tasks · {{ p.members|length }} members</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No projects yet. <a href="{{ url_for('projects') }}">Create one →</a></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
